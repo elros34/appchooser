@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+X-Nemo-Application-Type=silica-qt5
+Icon=appchooser
+Exec=appchooser
+Name=AppChooser
+NoDisplay=true
+
+X-Maemo-Service=com.appchooser
+X-Maemo-Object-Path=/com/appchooser
+X-Maemo-Method=com.appchooser.openWith

@@ -1,0 +1,5 @@
+[D-BUS Service]
+Interface=/com/appchooser
+Name=com.appchooser
+Exec=/usr/bin/appchooser --type=silica-qt5 --desktop-file=appchooser.desktop -s appchooser
+
