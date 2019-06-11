@@ -13,11 +13,15 @@ SilicaPrivate.Window {
     property alias __silica_applicationwindow_instance: window
 
     property bool _dimScreen: false
+    property bool _dimmingActive: false
 
     onVisibleChanged: {
         console.log("visible", visible)
-        if (!visible)
+        if (!visible) {
             appChooser.clear()
+            mainView.flickable.scrollToTop()
+            appChooser.rememberChoice = false
+        }
     }
 
     AppChooser {
@@ -47,7 +51,7 @@ SilicaPrivate.Window {
         }
 
         property int maxMainViewHeight: height * 4/5
-        property int mainViewHeight: Math.min(maxMainViewHeight, mainView.flickableHeight)
+        property int mainViewHeight: Math.min(maxMainViewHeight, mainView.flickable.height)
 
         SilicaPrivate.Wallpaper {
             width: parent.width
@@ -77,6 +81,10 @@ SilicaPrivate.Window {
             }
             onClicked: {
                 window.deactivate()
+            }
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.rgba("black", 0.3)
             }
         }
     }

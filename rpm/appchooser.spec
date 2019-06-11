@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.0.1
+Version:    0.0.2
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -41,19 +41,40 @@ desktop-file-install --delete-original       \
    %{buildroot}%{_datadir}/applications/*.desktop
 
 %post
-su -l nemo -c "lca-tool --setmimedefault x-scheme-handler/http appchooser"
-su -l nemo -c "lca-tool --setmimedefault x-scheme-handler/https appchooser"
-killall appchooser || true
+
+# fix webcat
+if [ -f /home/nemo/.local/share/applications/mimeinfo.cache ]; then
+    echo "Fixing webcat"
+    rm /home/nemo/.local/share/applications/mimeinfo.cache
+    mv /home/nemo/.local/share/applications/harbour-webcat-open-url.desktop /usr/share/applications/
+fi
+
+echo "dconf: $(su nemo -c "dconf read /apps/appchooser/domination")"
+if [ "$(su nemo -c "dconf read /apps/appchooser/domination")" != "true" ]; then
+    echo "Setting AppChooser as main MIME handler"
+    su nemo -c "dconf write /apps/appchooser/domination true"
+    mv /home/nemo/.local/share/applications/mimeapps.list /home/nemo/.local/share/applications/mimeapps.list.bac
+    cp -a %{_datadir}/%{name}/mimeapps-appchooser.list /home/nemo/.local/share/applications/mimeapps.list
+fi
+
+killall appchooser 2>/dev/null || true
+update-desktop-database 2>&1 | grep -v x-maemo-highlight
 
 %postun
-su -l nemo -c "lca-tool --resetmimedefault x-scheme-handler/http"
-su -l nemo -c "lca-tool --resetmimedefault x-scheme-handler/https"
-
+if [ $1 == 0 ]; then
+    echo "Resetting MIME handlers"
+    su nemo -c "dconf reset /apps/appchooser/domination"
+    rm /home/nemo/.local/share/applications/mimeapps.list
+    update-desktop-database 2>&1 | grep -v x-maemo-highlight
+fi
 
 %files
 %defattr(-,root,root,-)
 %{_bindir}
 %{_datadir}/%{name}
+%{_datadir}/%{name}-settings
 %{_datadir}/applications/%{name}.desktop
+%{_datadir}/applications/%{name}-settings.desktop
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 %{_datadir}/dbus-1/services
+%attr(0666, nemo, nemo) %{_datadir}/%{name}/mimeapps-appchooser.list

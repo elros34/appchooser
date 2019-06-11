@@ -3,13 +3,38 @@ import Sailfish.Silica 1.0
 
 Item {
     id: mainView
-    property alias flickableHeight: flickable.height
+    property alias flickable: flickable
 
     SilicaFlickable {
         id: flickable
         width: parent.width
         height: Math.min(contentHeight, rotateItem.maxMainViewHeight)
         contentHeight: column.height
+
+        PullDownMenu {
+            enabled: appChooser.fileMimeType.length
+            visible: enabled
+            quickSelect: true
+            MenuItem {
+                TextSwitch {
+                    id: textSwitch
+                    text: "Remember choice"
+                    width: parent.width
+                    checked: appChooser.rememberChoice
+                    anchors {
+                        verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                onClicked: {
+                    appChooser.rememberChoice = !appChooser.rememberChoice
+                }
+            }
+
+//            MenuItem {
+//                text: "More"
+//            }
+        }
 
         Column {
             id: column
@@ -48,10 +73,19 @@ Item {
                     width: parent.width - 2*Theme.paddingLarge
                     anchors.horizontalCenter: parent.horizontalCenter
                     wrapMode: Text.WrapAnywhere
-                    text: appChooser.launchArgs
+                    text: labelText
                     maximumLineCount: expanded ? undefined : 2
+                    textFormat: Text.RichText
+
                     clip: true
                     property bool expanded: false
+                    property string labelText: {
+                        if (appChooser.fileMimeType.length)
+                            return appChooser.launchArgs + " <font color=\"" +
+                                Theme.secondaryHighlightColor + "\">(" + appChooser.fileMimeType + ")</font>"
+                        else
+                           return appChooser.launchArgs
+                    }
                 }
 
                 menu: ContextMenu {
@@ -59,21 +93,17 @@ Item {
                         text: "Copy to clipboard"
                         onClicked: {
                             Clipboard.text = urlLabel.text
+                            console.log(urlLabel.expandedText)
                         }
                     }
                 }
             }
 
-//            TextSwitch {
-//                text: "Remember choice"
-//                onCheckedChanged: {
-
-//                }
-//            }
-
             SilicaListView {
                 width: parent.width
                 height: contentHeight
+
+                verticalLayoutDirection: ListView.BottomToTop
 
                 model: appChooser
 
