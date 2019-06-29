@@ -12,6 +12,12 @@ MimeHandler::MimeHandler(QObject *parent) : QAbstractListModel(parent)
     refresh();
 }
 
+MimeHandler::~MimeHandler()
+{
+    qDeleteAll(m_mimes);
+    m_mimes.clear();
+}
+
 QVariant MimeHandler::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() >= m_mimes.count())
@@ -59,7 +65,10 @@ void MimeHandler::refresh()
         Action action = defaultActionForMime(mimeItem->mime());
         if (action.isValid()) {
             mimeItem->setAction(action.name());
-            mimeItem->setActionPretty(action.localizedName());
+            if (action.name() == "appchooser")
+                mimeItem->setActionPretty("Ask");
+            else
+                mimeItem->setActionPretty(action.localizedName());
         }
         m_mimes.append(mimeItem);
     }
@@ -73,7 +82,10 @@ void MimeHandler::refresh()
             mimeItem->setMime(mime);
             if (action.isValid()) {
                 mimeItem->setAction(action.name());
-                mimeItem->setActionPretty(action.localizedName());
+                if (action.name() == "appchooser")
+                    mimeItem->setActionPretty("Ask");
+                else
+                    mimeItem->setActionPretty(action.localizedName());
             }
             m_mimes.append(mimeItem);
         }
@@ -111,7 +123,7 @@ void MimeHandler::setToAppChooser(int idx)
     QString mime = mimeItem->mime();
     setMimeDefault(mime, "appchooser");
     mimeItem->setAction("appchooser");
-    mimeItem->setActionPretty("AppChooser");
+    mimeItem->setActionPretty("Ask");
 
     emit dataChanged(index(idx, 0), index(idx, 0), {ActionRole, ActionPrettyRole});
 }
@@ -122,7 +134,7 @@ void MimeHandler::setVisibleToAppChooser()
         if (!mimeItem->action().isEmpty()) {
             setMimeDefault(mimeItem->mime(), "appchooser");
             mimeItem->setAction("appchooser");
-            mimeItem->setActionPretty("AppChooser");
+            mimeItem->setActionPretty("Ask");
         }
     }
     emit dataChanged(index(0, 0), index(m_mimes.length() - 1, 0), {ActionRole, ActionPrettyRole});
@@ -134,7 +146,7 @@ void MimeHandler::setAllToAppChooser()
         if (mimeItem->action() != "appchooser") {
             setMimeDefault(mimeItem->mime(), "appchooser");
             mimeItem->setAction("appchooser");
-            mimeItem->setActionPretty("AppChooser");
+            mimeItem->setActionPretty("Ask");
         }
     }
     emit dataChanged(index(0, 0), index(m_mimes.length() - 1, 0), {ActionRole, ActionPrettyRole, EmptyRole});

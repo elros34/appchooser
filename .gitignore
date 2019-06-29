@@ -3,3 +3,5 @@ Makefile*
 .moc
 *.list
 *.pro.user
+RPMS
+*.so

@@ -1,15 +1,33 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
+import AppChooser.Settings 1.0
 
 Page {
     id: page
 
+    property Item searchField: listView.headerItem
+    focus: !searchField.focus
+
+    Keys.onPressed: {
+        searchField.text += event.text
+        searchField.forceActiveFocus()
+    }
+
     SilicaListView {
         id: listView
         anchors.fill: parent
+        currentIndex: -1
 
-        header: PageHeader {
-            title: "Mimes"
+        header: SearchField {
+            id: _searchField
+            width: parent.width
+            placeholderText: "Search MIMEs"
+            focusOutBehavior: FocusBehavior.KeepFocus
+            inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+
+            onTextChanged: {
+                mimeFilter.setFilterWildcard(text)
+            }
         }
 
         PullDownMenu {
@@ -26,7 +44,7 @@ Page {
                 }
             }
             MenuItem {
-                text: "Set visible to AppChooser"
+                text: "Set visible to 'Ask'"
                 onClicked: {
                     if (listView.showEmptyMimes)
                         mimeHandler.setAllToAppChooser()
@@ -44,11 +62,10 @@ Page {
 
         property bool showEmptyMimes: false
 
-        model: mimeHandler
+        model: mimeFilter
 
         delegate: ListItem {
-            contentHeight: visible ? label.height : 0
-            visible: listView.showEmptyMimes ? true : !model.empty
+            contentHeight: label.height
 
             Label {
                 id: label
@@ -61,6 +78,7 @@ Page {
                 }
                 color: Theme.secondaryHighlightColor
                 wrapMode: Text.WrapAnywhere
+                textFormat: Text.StyledText
                 text: model.mime + "<font color=\"" +
                       Theme.primaryColor + "\"> " + model.actionPretty + "</font>"
             }
@@ -72,12 +90,14 @@ Page {
             menu: ContextMenu {
                 MenuItem {
                     text: "Reset to default"
+                    visible: !model.empty
                     onClicked: {
                         mimeHandler.reset(index)
                     }
                 }
                 MenuItem {
-                    text: "Set to \"AppChooser\""
+                    text: "Set to 'Ask'"
+                    visible: model.action !== "appchooser"
                     onClicked: {
                         mimeHandler.setToAppChooser(index)
                     }
@@ -93,5 +113,15 @@ Page {
             width: 1
             height: Theme.paddingMedium
         }
+    }
+
+    MimeHandler {
+        id: mimeHandler
+    }
+
+    MimeFilter {
+        id: mimeFilter
+        sourceModel: mimeHandler
+        showEmptyMimes: listView.showEmptyMimes
     }
 }

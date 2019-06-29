@@ -75,7 +75,7 @@ Item {
                     wrapMode: Text.WrapAnywhere
                     text: labelText
                     maximumLineCount: expanded ? undefined : 2
-                    textFormat: Text.RichText
+                    textFormat: Text.StyledText
 
                     clip: true
                     property bool expanded: false

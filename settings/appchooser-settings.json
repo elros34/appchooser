@@ -1,0 +1,15 @@
+{
+    "entries": [
+        {
+            "path": "system_settings/look_and_feel/appchooser",
+            "title": "AppChooser",
+            "type": "page",
+            "order": "6000",
+            "icon": "image://theme/icon-m-menu",
+            "params": {
+                "source": "/usr/share/appchooser/qml/settings/Settings.qml"
+            }
+        }
+    ]
+}
+

@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.0.2
+Version:    0.0.3
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -72,9 +72,10 @@ fi
 %defattr(-,root,root,-)
 %{_bindir}
 %{_datadir}/%{name}
-%{_datadir}/%{name}-settings
+%{_datadir}/jolla-settings/entries/%{name}-settings.json
+%{_libdir}/qt5/qml/AppChooser/Settings/libappchooser-settings.so
+%{_libdir}/qt5/qml/AppChooser/Settings/qmldir
 %{_datadir}/applications/%{name}.desktop
-%{_datadir}/applications/%{name}-settings.desktop
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 %{_datadir}/dbus-1/services
 %attr(0666, nemo, nemo) %{_datadir}/%{name}/mimeapps-appchooser.list

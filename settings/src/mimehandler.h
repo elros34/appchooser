@@ -10,6 +10,7 @@ class MimeHandler : public QAbstractListModel
     Q_OBJECT
 public:
     explicit MimeHandler(QObject *parent = nullptr);
+    ~MimeHandler();
 
     enum myRoles {
         MimeRole = Qt::UserRole + 1,

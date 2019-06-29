@@ -11,7 +11,9 @@
 #include <QProcess>
 #include <QMimeDatabase>
 
-AppChooser::AppChooser(QObject *parent) : QAbstractListModel(parent)
+AppChooser::AppChooser(QObject *parent) :
+    QAbstractListModel(parent),
+    m_rememberChoice(false)
 {
     detectIconsPaths();
     checkWebcat();
@@ -77,6 +79,9 @@ void AppChooser::openWith(const QString &launchArgs)
     foreach (const Action &action, list)
         appendAction(action);
 
+    if (fileMimeType() == "application/x-desktop")
+        appendDesktopLauncher(launchArgs.section("/", -1));
+
     if (m_actionList.count() > 1) {
         endResetModel();
         emit showWindow();
@@ -122,12 +127,20 @@ void AppChooser::appendAction(const Action &action)
     qDebug() << "action:" << actionName;
 
     MDesktopEntry desktopEntry("/usr/share/applications/" + actionItem->desktop());
-    QString icon = iconsPaths.first() + desktopEntry.icon() + ".png";
-    if (!QFileInfo(icon).exists())
-        icon = iconsPaths.at(1) + desktopEntry.icon() + ".png";
-    actionItem->setIcon(icon);
+    actionItem->setIcon(getIconPath(desktopEntry.icon()));
     actionItem->setName(desktopEntry.name());
 
+    m_actionList.append(actionItem);
+}
+
+void AppChooser::appendDesktopLauncher(const QString &desktop)
+{
+    Action action = Action::launcherAction(desktop, {});
+    ActionItem *actionItem = new ActionItem(this);
+    actionItem->setOriginAction(action.name());
+    actionItem->setAction(action.name());
+    actionItem->setIcon(getIconPath(action.icon()));
+    actionItem->setName("Launch '" + action.localizedName() + "'");
     m_actionList.append(actionItem);
 }
 
@@ -139,7 +152,6 @@ void AppChooser::launch(int idx)
                 {m_launchArgs});
     launcherAction.trigger();
 
-    // add notify for broken (probably most of non jolla) mime handlers
     notifyLaunching(actionItem->desktop());
 
     if (m_rememberChoice)
@@ -148,6 +160,7 @@ void AppChooser::launch(int idx)
 
 void AppChooser::notifyLaunching(const QString &desktop)
 {
+    // notify for broken (probably most of non jolla) mime handlers
     if (desktop.startsWith("jolla-") || desktop.startsWith("sailfish-browser"))
         return;
     static QDBusInterface *launchIf = new QDBusInterface("org.nemomobile.lipstick",
@@ -171,7 +184,8 @@ void AppChooser::clear()
 void AppChooser::setMime(int idx)
 {
     ActionItem *item = m_actionList.at(idx);
-    setMimeDefault(fileMimeType(), item->originAction());
+    if (!item->name().startsWith("Launch '"))
+        setMimeDefault(fileMimeType(), item->originAction());
 }
 
 QString AppChooser::launchArgs() const
@@ -230,6 +244,14 @@ void AppChooser::detectIconsPaths()
         ratio += ".0";
     iconsPaths << QString("/usr/share/themes/sailfish-default/meegotouch/z%1/icons/").arg(ratio);
 
+}
+
+QString AppChooser::getIconPath(const QString &iconName)
+{
+    QString iconPath = iconsPaths.first() + iconName + ".png";
+    if (!QFileInfo(iconPath).exists())
+        iconPath = iconsPaths.at(1) + iconName + ".png";
+    return iconPath;
 }
 
 void AppChooser::checkWebcat()

@@ -58,6 +58,8 @@ private:
     QStringList ancestorsForMime(const QString &mime);
     QStringList mimesForFile(const QString &fileName);
     void setMime(int idx);
+    void appendDesktopLauncher(const QString &desktop);
+    QString getIconPath(const QString &iconName);
 
 signals:
     void launchArgsChanged();
