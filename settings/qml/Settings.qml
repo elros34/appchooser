@@ -9,8 +9,10 @@ Page {
     focus: !searchField.focus
 
     Keys.onPressed: {
-        searchField.text += event.text
-        searchField.forceActiveFocus()
+        if (event.text.length && event.key > 0 && event.key < 16000000) {
+            searchField.text += event.text
+            searchField.forceActiveFocus()
+        }
     }
 
     SilicaListView {

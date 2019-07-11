@@ -19,18 +19,22 @@ public:
     QString desktop() const;
     void setDesktop(const QString &desktop);
 
-    QString originAction() const;
-    void setOriginAction(const QString &originAction);
+    QString launchAction() const;
+    void setLaunchAction(const QString &launchAction);
 
     QString action() const;
     void setAction(const QString &action);
+
+    bool dedicated() const;
+    void setDedicated(bool dedicated);
 
 private:
     QString m_name;
     QString m_icon;
     QString m_desktop;
-    QString m_originAction;
+    QString m_launchAction;
     QString m_action;
+    bool m_dedicated;
 
 signals:
 

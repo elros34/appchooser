@@ -15,7 +15,9 @@ OBJECTS_DIR = .obj
 SOURCES += \
     src/main.cpp \
     src/appchooser.cpp \
-    src/actionitem.cpp
+    src/actionitem.cpp \
+    src/actionsmodel.cpp \
+    src/appchooserfilter.cpp
 
 DISTFILES += qml/appchooser.qml \
     appchooser.desktop \
@@ -36,7 +38,9 @@ SAILFISHAPP_ICONS = 86x86 108x108 128x128 172x172
 
 HEADERS += \
     src/appchooser.h \
-    src/actionitem.h
+    src/actionitem.h \
+    src/actionsmodel.h \
+    src/appchooserfilter.h
 
 dbus.files = dbus/com.appchooser.service
 dbus.path = /usr/share/dbus-1/services/

@@ -12,5 +12,10 @@ mimeapps.files = data/mimeapps-appchooser.list
 mimeapps.path = /usr/share/appchooser/
 INSTALLS += mimeapps
 
-DISTFILES += \
-    settings/qml/pages/MimeSelector.qml
+contentaction.files = contentaction/video-url.xml
+contentaction.path = /usr/share/contentaction/
+INSTALLS += contentaction
+
+# TODO clean .moc and .obj dirs
+
+

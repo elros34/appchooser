@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.0.3
+Version:    0.0.4
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -49,7 +49,6 @@ if [ -f /home/nemo/.local/share/applications/mimeinfo.cache ]; then
     mv /home/nemo/.local/share/applications/harbour-webcat-open-url.desktop /usr/share/applications/
 fi
 
-echo "dconf: $(su nemo -c "dconf read /apps/appchooser/domination")"
 if [ "$(su nemo -c "dconf read /apps/appchooser/domination")" != "true" ]; then
     echo "Setting AppChooser as main MIME handler"
     su nemo -c "dconf write /apps/appchooser/domination true"
@@ -78,4 +77,5 @@ fi
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/*/apps/%{name}.png
 %{_datadir}/dbus-1/services
+%{_datadir}/contentaction/*.xml
 %attr(0666, nemo, nemo) %{_datadir}/%{name}/mimeapps-appchooser.list

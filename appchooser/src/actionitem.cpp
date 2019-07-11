@@ -1,6 +1,8 @@
 #include "actionitem.h"
 
-ActionItem::ActionItem(QObject *parent) : QObject(parent)
+ActionItem::ActionItem(QObject *parent) :
+    QObject(parent),
+    m_dedicated(true)
 {
 
 }
@@ -35,14 +37,14 @@ void ActionItem::setDesktop(const QString &desktop)
     m_desktop = desktop;
 }
 
-QString ActionItem::originAction() const
+QString ActionItem::launchAction() const
 {
-    return m_originAction;
+    return m_launchAction;
 }
 
-void ActionItem::setOriginAction(const QString &originAction)
+void ActionItem::setLaunchAction(const QString &launchAction)
 {
-    m_originAction = originAction;
+    m_launchAction = launchAction;
 }
 
 QString ActionItem::action() const
@@ -54,4 +56,14 @@ void ActionItem::setAction(const QString &action)
 {
     m_action = action;
     setDesktop(action + ".desktop");
+}
+
+bool ActionItem::dedicated() const
+{
+    return m_dedicated;
+}
+
+void ActionItem::setDedicated(bool dedicated)
+{
+    m_dedicated = dedicated;
 }

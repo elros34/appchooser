@@ -4,6 +4,18 @@ import Sailfish.Silica 1.0
 Item {
     id: mainView
     property alias flickable: flickable
+    property alias searchField: searchField
+
+    focus: !searchField.focus && window.visible
+
+    Keys.onPressed: {
+        // exotic hw keys might generate junk
+        if (event.text.length && event.key > 0 && event.key < 16000000) {
+            searchField.text += event.text
+            searchField.visible = true
+            searchField.forceActiveFocus()
+        }
+    }
 
     SilicaFlickable {
         id: flickable
@@ -14,16 +26,18 @@ Item {
         PullDownMenu {
             enabled: appChooser.fileMimeType.length
             visible: enabled
-            quickSelect: true
+
             MenuItem {
+                enabled: listView.count
                 TextSwitch {
                     id: textSwitch
                     text: "Remember choice"
                     width: parent.width
                     checked: appChooser.rememberChoice
-                    anchors {
-                        verticalCenter: parent.verticalCenter
-                    }
+                    enabled: parent.enabled
+                    _label.color: parent.color
+                    leftMargin: (parent.width - _label.contentWidth)/3 //FIXME
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 onClicked: {
@@ -31,9 +45,23 @@ Item {
                 }
             }
 
-//            MenuItem {
-//                text: "More"
-//            }
+            MenuItem {
+                text: appChooser.dedicatedAppsMode ? "More applications" : "Dedicated applications"
+                onClicked: {
+                    if (appChooser.dedicatedAppsMode)
+                        appChooser.busy = true
+                }
+                onDelayedClick: {
+                    appChooser.dedicatedAppsMode = !appChooser.dedicatedAppsMode
+                }
+            }
+
+            MenuItem {
+                text: searchField.visible ? "Hide Search" : "Show Search"
+                onClicked: {
+                    searchField.visible = !searchField.visible
+                }
+            }
         }
 
         Column {
@@ -76,6 +104,7 @@ Item {
                     text: labelText
                     maximumLineCount: expanded ? undefined : 2
                     textFormat: Text.StyledText
+                    truncationMode: TruncationMode.Elide
 
                     clip: true
                     property bool expanded: false
@@ -92,20 +121,57 @@ Item {
                     MenuItem {
                         text: "Copy to clipboard"
                         onClicked: {
-                            Clipboard.text = urlLabel.text
-                            console.log(urlLabel.expandedText)
+                            Clipboard.text = appChooser.launchArgs
+                            console.log(appChooser.launchArgs)
                         }
                     }
                 }
             }
 
+            Item {
+                width: parent.width
+                height: noAppsLabel.height + Theme.paddingLarge
+                visible: !listView.count && !searchField.visible
+                Label {
+                    id: noAppsLabel
+                    anchors {
+                        left: parent.left
+                        leftMargin: Theme.paddingMedium
+                        right: parent.right
+                        rightMargin: Theme.paddingMedium
+                        verticalCenter: parent.verticalCenter
+                    }
+                    wrapMode: Text.Wrap
+                    text: "No dedicated application found"
+                    horizontalAlignment: Text.AlignHCenter
+                    color: Theme.highlightColor
+                    font.pixelSize: Theme.fontSizeLarge
+                }
+            }
+
+            SearchField {
+                id: searchField
+                width: parent.width
+                visible: false
+                focus: visible
+                placeholderText: "Search .."
+                focusOutBehavior: FocusBehavior.KeepFocus
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+
+                onTextChanged: {
+                    appChooserFilter.search(text)
+                }
+            }
+
             SilicaListView {
+                id: listView
                 width: parent.width
                 height: contentHeight
+                currentIndex: -1
 
                 verticalLayoutDirection: ListView.BottomToTop
 
-                model: appChooser
+                model: appChooserFilter
 
                 delegate: ListItem {
 
@@ -141,8 +207,7 @@ Item {
                     }
 
                     onClicked: {
-                        appChooser.launch(index)
-                        window.deactivate()
+                       appChooser.launch(appChooserFilter.indexToSource(index))
                     }
                 }
             }
@@ -156,5 +221,11 @@ Item {
         VerticalScrollDecorator {
             flickable: flickable
         }
+    }
+
+    BusyIndicator {
+        anchors.centerIn: parent
+        running: appChooser.busy
+        size: BusyIndicatorSize.Large
     }
 }

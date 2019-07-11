@@ -17,10 +17,13 @@ SilicaPrivate.Window {
 
     onVisibleChanged: {
         console.log("visible", visible)
-        if (!visible) {
+        if (visible) {
+            mainView.forceActiveFocus()
+        } else  {
             appChooser.clear()
             mainView.flickable.scrollToTop()
-            appChooser.rememberChoice = false
+            mainView.searchField.text = ""
+            mainView.searchField.visible = false
         }
     }
 
@@ -29,6 +32,10 @@ SilicaPrivate.Window {
 
         onShowWindow: {
             window.activate()
+        }
+
+        onHideWindow: {
+            window.deactivate()
         }
     }
 
@@ -114,11 +121,16 @@ SilicaPrivate.Window {
 
         signalsEnabled: true
 
-        function display_status_ind(status)
-        {
+        function display_status_ind(status) {
             if (status === "off")
                 window.deactivate()
         }
+    }
+
+    AppChooserFilter {
+        id: appChooserFilter
+        sourceModel: appChooser
+        dedicatedAppsMode: appChooser.dedicatedAppsMode
     }
 }
 

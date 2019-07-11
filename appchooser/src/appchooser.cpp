@@ -7,49 +7,20 @@
 #include <QDBusPendingCall>
 #include "actionitem.h"
 #include <contentaction5/contentinfo.h>
-#include <QElapsedTimer>
 #include <QProcess>
 #include <QMimeDatabase>
+#include <QDir>
+
+const QStringList fileActionPostfixList = {"-openfile", "-open-file", "-import"};
+const QStringList schemeActionPostfixList = {"-openurl", "-open-url", "-playvideostream"};
 
 AppChooser::AppChooser(QObject *parent) :
-    QAbstractListModel(parent),
-    m_rememberChoice(false)
+    ActionsModel(parent),
+    m_rememberChoice(false),
+    m_dedicatedAppsMode(true)
 {
     detectIconsPaths();
     checkWebcat();
-}
-
-AppChooser::~AppChooser()
-{
-    qDeleteAll(m_actionList);
-    m_actionList.clear();
-}
-
-QVariant AppChooser::data(const QModelIndex &index, int role) const
-{
-    if (!index.isValid() || index.row() >= m_actionList.count())
-        return QVariant();
-
-    if (role == NameRole) {
-        return m_actionList.at(index.row())->name();
-    } else if (role == IconRole) {
-        return m_actionList.at(index.row())->icon();
-    }
-    return QVariant();
-}
-
-int AppChooser::rowCount(const QModelIndex &parent) const
-{
-    Q_UNUSED(parent)
-    return m_actionList.count();
-}
-
-QHash<int, QByteArray> AppChooser::roleNames() const
-{
-    QHash<int, QByteArray> roles;
-    roles[NameRole] = "name";
-    roles[IconRole] = "icon";
-    return roles;
 }
 
 void AppChooser::openWith(const QString &launchArgs)
@@ -63,18 +34,18 @@ void AppChooser::openWith(const QString &launchArgs)
         QStringList mimes = mimesForFile(launchArgs);
         if (mimes.isEmpty()) {
             endResetModel();
+            emit showWindow();
             return;
         }
         setFileMimeType(mimes.first());
         qDebug() << "mimes: " << mimes;
 
         foreach (const QString &mime, mimes) {
-            QList<Action> actions = actionsForMime(mime);
-            list << actions;
+            list << actionsForMime(mime);
         }
     } else {
-        list << Action::actionsForString(launchArgs);
         list << Action::actionsForScheme(launchArgs);
+        list << Action::actionsForString(launchArgs);
     }
     foreach (const Action &action, list)
         appendAction(action);
@@ -82,17 +53,8 @@ void AppChooser::openWith(const QString &launchArgs)
     if (fileMimeType() == "application/x-desktop")
         appendDesktopLauncher(launchArgs.section("/", -1));
 
-    if (m_actionList.count() > 1) {
-        endResetModel();
-        emit showWindow();
-    } else if (m_actionList.count() == 1) {
-        launch(0);
-        clear();
-        endResetModel();
-    } else {
-        // TODO add "More" button
-        qDebug() << "no handler for: " << launchArgs;
-    }
+    endResetModel();
+    emit showWindow();
 }
 
 void AppChooser::appendAction(const Action &action)
@@ -101,34 +63,22 @@ void AppChooser::appendAction(const Action &action)
         return;
 
     foreach (const ActionItem *item, m_actionList) {
-        if (action.name() == item->originAction())
+        if (action.name() == item->launchAction())
             return;
     }
 
-    qDebug() << "origin action: " << action.name();
-
     ActionItem *actionItem = new ActionItem(this);
     QString actionName = action.name();
-    actionItem->setOriginAction(actionName);
+    actionItem->setLaunchAction(actionName);
+    actionItem->setAction(launchActionToAction(actionName));
 
-    if (actionName == "open-url") {
-        actionName = "sailfish-browser";
-    } else {
-        QStringList endList;
-        endList << "-openurl" << "-playvideostream" << "-openfile" << "-open-url" << "-import";
-        foreach (QString end, endList) {
-            if (actionName.endsWith(end))
-                actionName = actionName.remove(end);
-        }
-    }
-    if (!QFileInfo("/usr/share/applications/" + actionName + ".desktop").exists())
-        actionName = actionItem->originAction();
-    actionItem->setAction(actionName);
-    qDebug() << "action:" << actionName;
+    //qDebug() << "action:" << actionItem->action();
+    //qDebug() << "launch action:" << actionItem->launchAction();
 
     MDesktopEntry desktopEntry("/usr/share/applications/" + actionItem->desktop());
     actionItem->setIcon(getIconPath(desktopEntry.icon()));
     actionItem->setName(desktopEntry.name());
+    actionItem->setDedicated(true);
 
     m_actionList.append(actionItem);
 }
@@ -136,8 +86,10 @@ void AppChooser::appendAction(const Action &action)
 void AppChooser::appendDesktopLauncher(const QString &desktop)
 {
     Action action = Action::launcherAction(desktop, {});
+    if (!action.isValid())
+        return;
     ActionItem *actionItem = new ActionItem(this);
-    actionItem->setOriginAction(action.name());
+    actionItem->setLaunchAction(action.name());
     actionItem->setAction(action.name());
     actionItem->setIcon(getIconPath(action.icon()));
     actionItem->setName("Launch '" + action.localizedName() + "'");
@@ -146,11 +98,22 @@ void AppChooser::appendDesktopLauncher(const QString &desktop)
 
 void AppChooser::launch(int idx)
 {
+    if (idx < 0 || idx >= m_actionList.length())
+        return;
     ActionItem *actionItem = m_actionList.at(idx);
+    if (actionItem->launchAction().isEmpty())
+        actionItem->setLaunchAction(actionToLaunchAction(actionItem->action()));
+    qDebug() << actionItem->launchAction();
     Action launcherAction = Action::launcherAction(
-                actionItem->originAction() + ".desktop",
+                actionItem->launchAction() + ".desktop",
                 {m_launchArgs});
+    if (!launcherAction.isValid()) {
+        emit hideWindow();
+        return;
+    }
     launcherAction.trigger();
+
+    emit hideWindow();
 
     notifyLaunching(actionItem->desktop());
 
@@ -179,13 +142,16 @@ void AppChooser::clear()
     m_actionList.clear();
     endResetModel();
     setFileMimeType("");
+    setDedicatedAppsMode(true);
+    setRememberChoice(false);
+    dedicatedAppsAdded = false;
 }
 
 void AppChooser::setMime(int idx)
 {
     ActionItem *item = m_actionList.at(idx);
     if (!item->name().startsWith("Launch '"))
-        setMimeDefault(fileMimeType(), item->originAction());
+        setMimeDefault(fileMimeType(), item->launchAction());
 }
 
 QString AppChooser::launchArgs() const
@@ -233,25 +199,23 @@ void AppChooser::setFileMimeType(const QString &fileMimeType)
     emit fileMimeTypeChanged();
 }
 
-void AppChooser::detectIconsPaths()
+bool AppChooser::dedicatedAppsMode() const
 {
-    MGConfItem iconSize("/desktop/sailfish/silica/icon_size_launcher");
-    iconsPaths << QString("/usr/share/icons/hicolor/%1x%1/apps/").arg(iconSize.value().toString());
-
-    MGConfItem pixelRatio("/desktop/sailfish/silica/theme_pixel_ratio");
-    QString ratio = pixelRatio.value().toString();
-    if (ratio == "1" || ratio == "2")
-        ratio += ".0";
-    iconsPaths << QString("/usr/share/themes/sailfish-default/meegotouch/z%1/icons/").arg(ratio);
-
+    return m_dedicatedAppsMode;
 }
 
-QString AppChooser::getIconPath(const QString &iconName)
+void AppChooser::setDedicatedAppsMode(bool dedicatedAppsMode)
 {
-    QString iconPath = iconsPaths.first() + iconName + ".png";
-    if (!QFileInfo(iconPath).exists())
-        iconPath = iconsPaths.at(1) + iconName + ".png";
-    return iconPath;
+    if (dedicatedAppsMode == m_dedicatedAppsMode)
+        return;
+    m_dedicatedAppsMode = dedicatedAppsMode;
+    if (!dedicatedAppsMode) {
+        if (!dedicatedAppsAdded)
+            moreApps();
+        else
+            setBusy(false);
+    }
+    emit dedicatedAppsModeChanged();
 }
 
 void AppChooser::checkWebcat()
@@ -298,4 +262,85 @@ QStringList AppChooser::mimesForFile(const QString &fileName)
     QStringList ancestors = ancestorsForMime(contentInfo.mimeType());
     ancestors.prepend(contentInfo.mimeType());
     return ancestors;
+}
+
+QString AppChooser::actionToLaunchAction(const QString &action)
+{
+    QString launchAction = action;
+    if (action == "sailfish-browser") {
+        launchAction = "open-url";
+    } else {
+        QStringList postfixList;
+        if (m_launchArgs.startsWith("file:/"))
+            postfixList << fileActionPostfixList;
+        else
+            postfixList << schemeActionPostfixList;
+
+        foreach (const QString &postfix, postfixList) {
+            if (QFileInfo("/usr/share/applications/" + action + postfix + ".desktop").exists())
+                launchAction = action + postfix;
+        }
+    }
+
+    return launchAction;
+}
+
+QString AppChooser::launchActionToAction(QString launchAction)
+{
+    QString action = launchAction;
+    if (launchAction == "open-url") {
+        action = "sailfish-browser";
+    } else {
+        QStringList postfixList;
+        postfixList << fileActionPostfixList << schemeActionPostfixList;
+        foreach (const QString &postfix, postfixList) {
+            if (launchAction.endsWith(postfix))
+                launchAction = launchAction.remove(postfix);
+        }
+        if (QFileInfo("/usr/share/applications/" + launchAction + ".desktop").exists())
+            action = launchAction;
+    }
+
+    return action;
+}
+
+void AppChooser::moreApps()
+{
+    setBusy(true);
+
+    QDir dir("/usr/share/applications/");
+    dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);
+    dir.setNameFilters({"*.desktop"});
+    QStringList entryList = dir.entryList();
+
+    beginResetModel();
+    foreach (const QString &entry, entryList) {
+        bool dedicated = false;
+        foreach (ActionItem *i, m_actionList) {
+            if (i->desktop() == entry) {
+                dedicated = true;
+                break;
+            }
+        }
+        if (dedicated)
+            continue;
+
+        MDesktopEntry desktopEntry(dir.path() + "/" + entry);
+        if (desktopEntry.noDisplay())
+            continue;
+        ActionItem *actionItem = new ActionItem(this);
+        actionItem->setName(desktopEntry.name());
+        actionItem->setDesktop(entry);
+        actionItem->setAction(entry.section(".", 0, 0));
+        actionItem->setIcon(getIconPath(desktopEntry.icon()));
+        actionItem->setDedicated(false);
+        m_actionList.append(actionItem);
+    }
+
+    qSort(m_actionList.begin(), m_actionList.end(),
+          [] (const ActionItem *a, const ActionItem *b) { return a->name() > b->name(); });
+    endResetModel();
+
+    dedicatedAppsAdded = true;
+    setBusy(false);
 }
