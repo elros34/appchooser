@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.0.4
+Version:    0.0.5
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -46,25 +46,29 @@ desktop-file-install --delete-original       \
 if [ -f /home/nemo/.local/share/applications/mimeinfo.cache ]; then
     echo "Fixing webcat"
     rm /home/nemo/.local/share/applications/mimeinfo.cache
-    mv /home/nemo/.local/share/applications/harbour-webcat-open-url.desktop /usr/share/applications/
+    mv /home/nemo/.local/share/applications/harbour-webcat-open-url.desktop /usr/share/applications/ || true
 fi
 
 if [ "$(su nemo -c "dconf read /apps/appchooser/domination")" != "true" ]; then
     echo "Setting AppChooser as main MIME handler"
     su nemo -c "dconf write /apps/appchooser/domination true"
-    mv /home/nemo/.local/share/applications/mimeapps.list /home/nemo/.local/share/applications/mimeapps.list.bac
+    mv /home/nemo/.local/share/applications/mimeapps.list /home/nemo/.local/share/applications/mimeapps.list.bac || true
     cp -a %{_datadir}/%{name}/mimeapps-appchooser.list /home/nemo/.local/share/applications/mimeapps.list
 fi
 
 killall appchooser 2>/dev/null || true
 update-desktop-database 2>&1 | grep -v x-maemo-highlight
 
+# Remove OpenFileDialog.qml to allow pre 3.1.0 release way to open MIME handlers
+mv %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml.appchooser_bac || true
+
 %postun
 if [ $1 == 0 ]; then
     echo "Resetting MIME handlers"
     su nemo -c "dconf reset /apps/appchooser/domination"
-    rm /home/nemo/.local/share/applications/mimeapps.list
+    rm /home/nemo/.local/share/applications/mimeapps.list || true
     update-desktop-database 2>&1 | grep -v x-maemo-highlight
+    mv %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml.appchooser_bac %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml
 fi
 
 %files
