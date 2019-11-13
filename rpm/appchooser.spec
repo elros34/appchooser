@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.0.5
+Version:    0.0.6
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -49,9 +49,9 @@ if [ -f /home/nemo/.local/share/applications/mimeinfo.cache ]; then
     mv /home/nemo/.local/share/applications/harbour-webcat-open-url.desktop /usr/share/applications/ || true
 fi
 
-if [ "$(su nemo -c "dconf read /apps/appchooser/domination")" != "true" ]; then
+if [ "$(su nemo -c "dconf read /apps/appchooser/mimeappsVersion")" != "1" ]; then
     echo "Setting AppChooser as main MIME handler"
-    su nemo -c "dconf write /apps/appchooser/domination true"
+    su nemo -c "dconf write /apps/appchooser/mimeappsVersion 1"
     mv /home/nemo/.local/share/applications/mimeapps.list /home/nemo/.local/share/applications/mimeapps.list.bac || true
     cp -a %{_datadir}/%{name}/mimeapps-appchooser.list /home/nemo/.local/share/applications/mimeapps.list
 fi
@@ -65,7 +65,7 @@ mv %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml %{_datadir}/l
 %postun
 if [ $1 == 0 ]; then
     echo "Resetting MIME handlers"
-    su nemo -c "dconf reset /apps/appchooser/domination"
+    su nemo -c "dconf reset /apps/appchooser/mimeappsVersion"
     rm /home/nemo/.local/share/applications/mimeapps.list || true
     update-desktop-database 2>&1 | grep -v x-maemo-highlight
     mv %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml.appchooser_bac %{_datadir}/lipstick-jolla-home-qt5/launcher/OpenFileDialog.qml

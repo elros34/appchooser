@@ -12,7 +12,7 @@
 #include <QDir>
 
 const QStringList fileActionPostfixList = {"-openfile", "-open-file", "-import"};
-const QStringList schemeActionPostfixList = {"-openurl", "-open-url", "-playvideostream"};
+const QStringList schemeActionPostfixList = {"-openurl", "-open-url", "-url", "-playvideostream"};
 
 AppChooser::AppChooser(QObject *parent) :
     ActionsModel(parent),

@@ -65,7 +65,7 @@ SilicaPrivate.Window {
             height: rotateItem.mainViewHeight
             blending: true
             windowRotation: parent.rotation
-            backgroundOpacity: colorScheme == Theme.LightOnDark ? 0.3 : _backgroundOpacity
+            color: Theme.rgba("black", Theme.colorScheme == Theme.LightOnDark ? 0.8 : 0.3)
         }
 
         Item {
