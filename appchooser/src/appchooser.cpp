@@ -258,10 +258,17 @@ QStringList AppChooser::ancestorsForMime(const QString &mime)
 
 QStringList AppChooser::mimesForFile(const QString &fileName)
 {
-    ContentInfo contentInfo = ContentInfo::forFile(fileName);
-    QStringList ancestors = ancestorsForMime(contentInfo.mimeType());
-    ancestors.prepend(contentInfo.mimeType());
-    return ancestors;
+    QMimeDatabase db;
+    QMimeType mimeType;
+    QUrl fileUrl = QUrl(fileName);
+    ContentInfo contentInfo = ContentInfo::forFile(fileUrl);
+    if (contentInfo.mimeType() == "application/x-trash")
+        mimeType = db.mimeTypeForFile(fileUrl.path(), QMimeDatabase::MatchContent);
+    else
+        mimeType = db.mimeTypeForName(contentInfo.mimeType());
+    QStringList mimes = {mimeType.name()};
+    mimes << mimeType.allAncestors();
+    return mimes;
 }
 
 QString AppChooser::actionToLaunchAction(const QString &action)
