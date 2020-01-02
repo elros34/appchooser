@@ -19,8 +19,9 @@ AppChooser::AppChooser(QObject *parent) :
     m_rememberChoice(false),
     m_dedicatedAppsMode(true)
 {
+    httpHandlerConf = new MGConfItem("/apps/appchooser/deafaultHttpHandler", this);
     detectIconsPaths();
-    checkWebcat();
+    checkMimeinfoCache();
 }
 
 void AppChooser::openWith(const QString &launchArgs)
@@ -37,20 +38,47 @@ void AppChooser::openWith(const QString &launchArgs)
             emit showWindow();
             return;
         }
-        setFileMimeType(mimes.first());
+        setCurrentMimeType(mimes.first());
         qDebug() << "mimes: " << mimes;
 
-        foreach (const QString &mime, mimes) {
+        for (const QString &mime : mimes) {
             list << actionsForMime(mime);
         }
-    } else {
+    } else if (launchArgs.startsWith("http")) {
+        QStringList regexpMimes = mimesForString();
+        qDebug() << "regexpMimes: " << regexpMimes;
+        if (regexpMimes.length() == 1) {
+            QString mime = regexpMimes.first();
+            Action defaultAction = defaultActionForMime(mime);
+            if (defaultAction.isValid() && launchApp(defaultAction.name())) {
+                endResetModel();
+                return;
+            }
+
+            setCurrentMimeType(mime);
+        } else if (regexpMimes.length() > 1) {// more than 1 regexp based mime type
+            setCurrentMimeType("");
+        } else {
+            setCurrentMimeType(mimeForUrl());
+            // check for default browser
+            if (currentMimeType().contains("x-scheme-handler/http")) {
+                QString httpHandler = httpHandlerConf->value().toString();
+                if (!httpHandler.isEmpty() && launchApp(httpHandler)) {
+                    endResetModel();
+                    return;
+                }
+            }
+        }
+
         list << Action::actionsForScheme(launchArgs);
         list << Action::actionsForString(launchArgs);
+    } else {
+        list << Action::actionsForScheme(launchArgs);
     }
-    foreach (const Action &action, list)
+    for (const Action &action : list)
         appendAction(action);
 
-    if (fileMimeType() == "application/x-desktop")
+    if (currentMimeType() == "application/x-desktop")
         appendDesktopLauncher(launchArgs.section("/", -1));
 
     endResetModel();
@@ -62,7 +90,7 @@ void AppChooser::appendAction(const Action &action)
     if (action.name() == "appchooser" || !action.isValid())
         return;
 
-    foreach (const ActionItem *item, m_actionList) {
+    for (const ActionItem *item : m_actionList) {
         if (action.name() == item->launchAction())
             return;
     }
@@ -71,9 +99,6 @@ void AppChooser::appendAction(const Action &action)
     QString actionName = action.name();
     actionItem->setLaunchAction(actionName);
     actionItem->setAction(launchActionToAction(actionName));
-
-    //qDebug() << "action:" << actionItem->action();
-    //qDebug() << "launch action:" << actionItem->launchAction();
 
     MDesktopEntry desktopEntry("/usr/share/applications/" + actionItem->desktop());
     actionItem->setIcon(getIconPath(desktopEntry.icon()));
@@ -118,7 +143,19 @@ void AppChooser::launch(int idx)
     notifyLaunching(actionItem->desktop());
 
     if (m_rememberChoice)
-        setMime(idx);
+        saveMime(idx);
+}
+
+bool AppChooser::launchApp(const QString &name)
+{
+    Action launcherAction = Action::launcherAction(name + ".desktop", {m_launchArgs});
+    if (!launcherAction.isValid() || name == "appchooser") {
+        return false;
+    }
+    launcherAction.trigger();
+    notifyLaunching(launchActionToAction(name) + ".desktop");
+
+    return true;
 }
 
 void AppChooser::notifyLaunching(const QString &desktop)
@@ -141,17 +178,22 @@ void AppChooser::clear()
     qDeleteAll(m_actionList);
     m_actionList.clear();
     endResetModel();
-    setFileMimeType("");
+    setCurrentMimeType("");
     setDedicatedAppsMode(true);
     setRememberChoice(false);
     dedicatedAppsAdded = false;
 }
 
-void AppChooser::setMime(int idx)
+void AppChooser::saveMime(int idx)
 {
     ActionItem *item = m_actionList.at(idx);
-    if (!item->name().startsWith("Launch '"))
-        setMimeDefault(fileMimeType(), item->launchAction());
+    if (!item->name().startsWith("Launch '") && !currentMimeType().isEmpty()) {
+        if (currentMimeType().contains("x-scheme-handler/http")) {
+            httpHandlerConf->set(item->launchAction());
+        } else {
+            setMimeDefault(currentMimeType(), item->launchAction());
+        }
+    }
 }
 
 QString AppChooser::launchArgs() const
@@ -186,17 +228,17 @@ void AppChooser::setRememberChoice(bool rememberChoice)
     emit rememberChoiceChanged();
 }
 
-QString AppChooser::fileMimeType() const
+QString AppChooser::currentMimeType() const
 {
-    return m_fileMimeType;
+    return m_currentMimeType;
 }
 
-void AppChooser::setFileMimeType(const QString &fileMimeType)
+void AppChooser::setCurrentMimeType(const QString &mimeType)
 {
-    if (fileMimeType == m_fileMimeType)
+    if (m_currentMimeType == mimeType)
         return;
-    m_fileMimeType = fileMimeType;
-    emit fileMimeTypeChanged();
+    m_currentMimeType = mimeType;
+    emit currentMimeTypeChanged();
 }
 
 bool AppChooser::dedicatedAppsMode() const
@@ -218,13 +260,12 @@ void AppChooser::setDedicatedAppsMode(bool dedicatedAppsMode)
     emit dedicatedAppsModeChanged();
 }
 
-void AppChooser::checkWebcat()
+void AppChooser::checkMimeinfoCache()
 {
-    if (QFileInfo("/home/nemo/.local/share/applications/mimeinfo.cache").exists() &&
-        QFileInfo("/home/nemo/.local/share/applications/harbour-webcat-open-url.desktop").exists()) {
-        qDebug() << "harbour compatible webcat detected. It will cause issues for other \"x-scheme-handler/https\" handlers."
-                 << "Remove /home/nemo/.local/share/applications/mimeinfo.cache and move /home/nemo/.local/share/applications/harbour-webcat-open-url.desktop to /usr/share/applications/"
-                 << "if you want to use other browsers.";
+    if (QFileInfo("/home/nemo/.local/share/applications/mimeinfo.cache").exists()) {
+        qDebug() << "harbour compatible webcat or/and microtube detected. It will cause issues for other \"x-scheme-handler/https\" handlers."
+                 << "Remove /home/nemo/.local/share/applications/mimeinfo.cache and move /home/nemo/.local/share/applications/*.desktop to /usr/share/applications/."
+                 << "Next run update-desktop-database as root if you want to use other browsers.";
     }
 }
 
@@ -238,14 +279,17 @@ QStringList AppChooser::mimesForString()
         return QStringList();
     QString mimes = proc.readAll();
     mimes.remove("x-maemo-highlight/http-url");
-    return mimes.simplified().split(" ");
+    return mimes.simplified().split(" ", QString::SkipEmptyParts);
 }
 
 QString AppChooser::mimeForUrl()
 {
     QMimeDatabase db;
     QMimeType mimeType = db.mimeTypeForUrl(m_launchArgs);
-    return mimeType.name();
+    if (mimeType.name() == "application/octet-stream") // unknown
+        return "x-scheme-handler/" + QUrl(m_launchArgs).scheme();
+    else
+        return mimeType.name();
 }
 
 QStringList AppChooser::ancestorsForMime(const QString &mime)
@@ -283,7 +327,7 @@ QString AppChooser::actionToLaunchAction(const QString &action)
         else
             postfixList << schemeActionPostfixList;
 
-        foreach (const QString &postfix, postfixList) {
+        for (const QString &postfix : postfixList) {
             if (QFileInfo("/usr/share/applications/" + action + postfix + ".desktop").exists())
                 launchAction = action + postfix;
         }
@@ -300,7 +344,7 @@ QString AppChooser::launchActionToAction(QString launchAction)
     } else {
         QStringList postfixList;
         postfixList << fileActionPostfixList << schemeActionPostfixList;
-        foreach (const QString &postfix, postfixList) {
+        for (const QString &postfix : postfixList) {
             if (launchAction.endsWith(postfix))
                 launchAction = launchAction.remove(postfix);
         }
@@ -321,9 +365,9 @@ void AppChooser::moreApps()
     QStringList entryList = dir.entryList();
 
     beginResetModel();
-    foreach (const QString &entry, entryList) {
+    for (const QString &entry : entryList) {
         bool dedicated = false;
-        foreach (ActionItem *i, m_actionList) {
+        for (ActionItem *i : m_actionList) {
             if (i->desktop() == entry) {
                 dedicated = true;
                 break;

@@ -4,7 +4,7 @@ CONFIG += plugin c++11 link_pkgconfig
 
 PKGCONFIG += contentaction5 mlite5
 
-QT += qml quick
+QT += qml quick xml
 
 TARGET = $$qtLibraryTarget($$TARGET)
 uri = AppChooser.Settings

@@ -24,7 +24,7 @@ Item {
         contentHeight: column.height
 
         PullDownMenu {
-            enabled: appChooser.fileMimeType.length
+            enabled: appChooser.currentMimeType.length
             visible: enabled
 
             MenuItem {
@@ -109,9 +109,9 @@ Item {
                     clip: true
                     property bool expanded: false
                     property string labelText: {
-                        if (appChooser.fileMimeType.length)
+                        if (appChooser.currentMimeType.length)
                             return appChooser.launchArgs + " <font color=\"" +
-                                Theme.secondaryHighlightColor + "\">(" + appChooser.fileMimeType + ")</font>"
+                                Theme.secondaryHighlightColor + "\">(" + appChooser.currentMimeType + ")</font>"
                         else
                            return appChooser.launchArgs
                     }
@@ -122,7 +122,6 @@ Item {
                         text: "Copy to clipboard"
                         onClicked: {
                             Clipboard.text = appChooser.launchArgs
-                            console.log(appChooser.launchArgs)
                         }
                     }
                 }

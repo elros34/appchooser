@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.0.7
+Version:    0.0.8
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -13,6 +13,7 @@ BuildRequires:  pkgconfig(sailfishapp) >= 1.0.2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
+BuildRequires:  pkgconfig(Qt5Xml)
 BuildRequires:  desktop-file-utils
 BuildRequires:  pkgconfig(contentaction5)
 BuildRequires:  pkgconfig(mlite5)

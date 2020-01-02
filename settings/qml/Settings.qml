@@ -40,7 +40,7 @@ Page {
 //                }
 //            }
             MenuItem {
-                text: "Reset all"
+                text: "Reset all mimes"
                 onClicked: {
                     mimeHandler.resetAll()
                 }
@@ -90,18 +90,19 @@ Page {
             }
 
             menu: ContextMenu {
+                enabled: !model.empty || model.action !== "appchooser"
                 MenuItem {
                     text: "Reset to default"
                     visible: !model.empty
                     onClicked: {
-                        mimeHandler.reset(index)
+                        mimeHandler.reset(mimeFilter.indexToSource(index))
                     }
                 }
                 MenuItem {
                     text: "Set to 'Ask'"
                     visible: model.action !== "appchooser"
                     onClicked: {
-                        mimeHandler.setToAppChooser(index)
+                        mimeHandler.setToAppChooser(mimeFilter.indexToSource(index))
                     }
                 }
             }

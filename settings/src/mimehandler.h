@@ -3,8 +3,10 @@
 
 #include <QObject>
 #include <QAbstractListModel>
+#include <QDomElement>
 
 class MimeItem;
+class MGConfItem;
 class MimeHandler : public QAbstractListModel
 {
     Q_OBJECT
@@ -32,6 +34,15 @@ public:
 
 private:
     QList<MimeItem*> m_mimes;
+    MGConfItem *httpHandlerConf;
+
+private:
+    QStringList mimesForXml(const QString &xml);
+    void appendMimes(const QString &prefix, const QStringList &mimes);
+    void fixMimeAppsList();
+
+    void resetMimeDefault(const QString& mimeType);
+    void setMimeDefault(const QString& mimeType, const QString& app);
 
 public slots:
 };

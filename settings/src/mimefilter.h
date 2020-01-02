@@ -16,6 +16,8 @@ public:
     bool showEmptyMimes() const;
     void setShowEmptyMimes(bool showEmptyMimes);
 
+    Q_INVOKABLE int indexToSource(const int idx);
+
 private:
     bool m_showEmptyMimes;
 

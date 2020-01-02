@@ -18,6 +18,12 @@ void MimeFilter::setShowEmptyMimes(bool showEmptyMimes)
     invalidateFilter();
 }
 
+int MimeFilter::indexToSource(const int idx)
+{
+    QModelIndex proxyIndex = index(idx, 0);
+    return mapToSource(proxyIndex).row();
+}
+
 bool MimeFilter::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const
 {
     QModelIndex sourceIndex = sourceModel()->index(source_row, 0, source_parent);

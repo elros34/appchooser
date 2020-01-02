@@ -9,13 +9,14 @@
 using namespace ContentAction;
 
 class ActionItem;
+class MGConfItem;
 class AppChooser : public ActionsModel
 {
     Q_OBJECT
     Q_PROPERTY(QString launchArgs READ launchArgs NOTIFY launchArgsChanged)
     Q_PROPERTY(bool rememberChoice READ rememberChoice WRITE setRememberChoice NOTIFY rememberChoiceChanged)
-    Q_PROPERTY(QString fileMimeType READ fileMimeType NOTIFY fileMimeTypeChanged)
     Q_PROPERTY(bool dedicatedAppsMode READ dedicatedAppsMode WRITE setDedicatedAppsMode NOTIFY dedicatedAppsModeChanged)
+    Q_PROPERTY(QString currentMimeType READ currentMimeType NOTIFY currentMimeTypeChanged)
 public:
     explicit AppChooser(QObject *parent = nullptr);
 
@@ -29,11 +30,11 @@ public:
     bool rememberChoice() const;
     void setRememberChoice(bool rememberChoice);
 
-    QString fileMimeType() const;
-    void setFileMimeType(const QString &fileMimeType);
-
     bool dedicatedAppsMode() const;
     void setDedicatedAppsMode(bool dedicatedAppsMode);
+
+    QString currentMimeType() const;
+    void setCurrentMimeType(const QString &mimeType);
 
 private:
     QStringList iconsPaths;
@@ -41,21 +42,24 @@ private:
     QString m_launchArgsPretty;
     bool m_rememberChoice;
     QString m_fileMimeType;
+    QString m_currentMimeType;
     bool m_dedicatedAppsMode;
+    MGConfItem *httpHandlerConf;
 
 private:
     void appendAction(const Action &action);
     void notifyLaunching(const QString &desktop);
-    void checkWebcat();
+    void checkMimeinfoCache();
     QStringList mimesForString();
     QString mimeForUrl();
     QStringList ancestorsForMime(const QString &mime);
     QStringList mimesForFile(const QString &fileName);
-    void setMime(int idx);
+    void saveMime(int idx);
     void appendDesktopLauncher(const QString &desktop);
     QString actionToLaunchAction(const QString &action);
     QString launchActionToAction(QString launchAction);
     void moreApps();
+    bool launchApp(const QString &name);
 
 signals:
     void launchArgsChanged();
@@ -64,6 +68,7 @@ signals:
     void rememberChoiceChanged();
     void fileMimeTypeChanged();
     void dedicatedAppsModeChanged();
+    void currentMimeTypeChanged();
 };
 
 #endif // APPCHOOSER_H
