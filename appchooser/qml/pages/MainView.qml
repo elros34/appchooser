@@ -109,11 +109,19 @@ Item {
                     clip: true
                     property bool expanded: false
                     property string labelText: {
-                        if (appChooser.currentMimeType.length)
+                        if (expanded && appChooser.currentMimeType.length)
                             return appChooser.launchArgs + " <font color=\"" +
                                 Theme.secondaryHighlightColor + "\">(" + appChooser.currentMimeType + ")</font>"
                         else
                            return appChooser.launchArgs
+                    }
+
+                    Connections {
+                        target: window
+                        onVisibleChanged: {
+                            if (!visible)
+                                urlLabel.expanded = false
+                        }
                     }
                 }
 

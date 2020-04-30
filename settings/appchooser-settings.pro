@@ -9,8 +9,6 @@ QT += qml quick xml
 TARGET = $$qtLibraryTarget($$TARGET)
 uri = AppChooser.Settings
 
-INCLUDEPATH += /usr/include/
-
 SOURCES += \
     src/mimehandler.cpp \
     src/mimeitem.cpp \

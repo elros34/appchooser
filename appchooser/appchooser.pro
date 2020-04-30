@@ -7,8 +7,6 @@ QT += gui-private dbus
 
 PKGCONFIG += contentaction5 mlite5
 
-INCLUDEPATH += /usr/include/
-
 MOC_DIR = .moc
 OBJECTS_DIR = .obj
 
