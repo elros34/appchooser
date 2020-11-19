@@ -35,6 +35,7 @@ public:
 private:
     QList<MimeItem*> m_mimes;
     MGConfItem *httpHandlerConf;
+    QString m_homePath;
 
 private:
     QStringList mimesForXml(const QString &xml);
@@ -43,6 +44,7 @@ private:
 
     void resetMimeDefault(const QString& mimeType);
     void setMimeDefault(const QString& mimeType, const QString& app);
+    void checkMimeinfoCache();
 
 public slots:
 };

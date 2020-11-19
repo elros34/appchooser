@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<actions>
+  <highlight regexp="(https?://)?(t\.me|telegram\.me|telegram\.dog)/joinchat/.+" name="tg-joinchat-url"/>
+  <highlight regexp="(https?://)?t\.me/[\w-]+" name="tg-resolve-url"/>
+</actions>
+

@@ -22,13 +22,19 @@ QVariant ActionsModel::data(const QModelIndex &index, int role) const
     if (!index.isValid() || index.row() >= m_actionList.count())
         return QVariant();
 
-    if (role == NameRole) {
-        return m_actionList.at(index.row())->name();
-    } else if (role == IconRole) {
-        return m_actionList.at(index.row())->icon();
-    } else if (role == DedicatedRole) {
-        return m_actionList.at(index.row())->dedicated();
+    ActionItem *item = m_actionList.at(index.row());
+
+    switch (role) {
+    case NameRole:
+        return item->name();
+    case NameSimplifiedRole:
+        return item->nameSimplified();
+    case IconRole:
+        return item->icon();
+    case DedicatedRole:
+        return item->dedicated();
     }
+
     return QVariant();
 }
 
@@ -42,6 +48,7 @@ QHash<int, QByteArray> ActionsModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
+    roles[NameSimplifiedRole] = "nameSimplified";
     roles[IconRole] = "icon";
     roles[DedicatedRole] = "dedicated";
     return roles;
@@ -49,8 +56,9 @@ QHash<int, QByteArray> ActionsModel::roleNames() const
 
 void ActionsModel::detectIconsPaths()
 {
+    // no longer exist in 3.4.0.24 or it was set by a patch?
     MGConfItem iconSize("/desktop/sailfish/silica/icon_size_launcher");
-    iconsPaths << QString("/usr/share/icons/hicolor/%1x%1/apps/").arg(iconSize.value().toString());
+    iconsPaths << QString("/usr/share/icons/hicolor/%1x%1/apps/").arg(iconSize.value(86).toString());
 
     MGConfItem pixelRatio("/desktop/sailfish/silica/theme_pixel_ratio");
     QString ratio = pixelRatio.value().toString();
@@ -62,6 +70,8 @@ void ActionsModel::detectIconsPaths()
 
 QString ActionsModel::getIconPath(const QString &iconName)
 {
+    if (iconName.startsWith("data:image/png"))
+        return iconName;
     foreach (const QString &path, iconsPaths) {
         QString iconPath = path + iconName + ".png";
         if (QFileInfo(iconPath).exists())

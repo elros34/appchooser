@@ -11,6 +11,8 @@
 #include <QMimeDatabase>
 #include <QDir>
 
+Q_LOGGING_CATEGORY(logAppchooser, "appchooser")
+
 const QStringList fileActionPostfixList = {"-openfile", "-open-file", "-import"};
 const QStringList schemeActionPostfixList = {"-openurl", "-open-url", "-url", "-playvideostream"};
 
@@ -19,34 +21,35 @@ AppChooser::AppChooser(QObject *parent) :
     m_rememberChoice(false),
     m_dedicatedAppsMode(true)
 {
+    m_homePath = QDir::homePath();
     httpHandlerConf = new MGConfItem("/apps/appchooser/deafaultHttpHandler", this);
     detectIconsPaths();
     checkMimeinfoCache();
 }
 
-void AppChooser::openWith(const QString &launchArgs)
+void AppChooser::openWith(const QString &launchArgUrl)
 {
-    setLaunchArgs(launchArgs);
-    qDebug() << launchArgs;
+    setLaunchArg(launchArgUrl);
+    qCDebug(logAppchooser) << launchArgUrl;
 
     beginResetModel();
     QList<Action> list;
-    if (launchArgs.startsWith("file:/")) {
-        QStringList mimes = mimesForFile(launchArgs);
+    if (launchArgUrl.startsWith("file:/")) {
+        QStringList mimes = mimesForFile(launchArgUrl);
         if (mimes.isEmpty()) {
             endResetModel();
             emit showWindow();
             return;
         }
         setCurrentMimeType(mimes.first());
-        qDebug() << "mimes: " << mimes;
+        qCDebug(logAppchooser) << "mimes: " << mimes;
 
         for (const QString &mime : mimes) {
             list << actionsForMime(mime);
         }
-    } else if (launchArgs.startsWith("http")) {
+    } else if (launchArgUrl.startsWith("http")) {
         QStringList regexpMimes = mimesForString();
-        qDebug() << "regexpMimes: " << regexpMimes;
+        qCDebug(logAppchooser) << "regexpMimes: " << regexpMimes;
         if (regexpMimes.length() == 1) {
             QString mime = regexpMimes.first();
             Action defaultAction = defaultActionForMime(mime);
@@ -70,16 +73,17 @@ void AppChooser::openWith(const QString &launchArgs)
             }
         }
 
-        list << Action::actionsForScheme(launchArgs);
-        list << Action::actionsForString(launchArgs);
+        list << Action::actionsForScheme(launchArgUrl);
+        if (regexpMimes.length())
+            list << Action::actionsForString(launchArgUrl);
     } else {
-        list << Action::actionsForScheme(launchArgs);
+        list << Action::actionsForScheme(launchArgUrl);
     }
     for (const Action &action : list)
         appendAction(action);
 
     if (currentMimeType() == "application/x-desktop")
-        appendDesktopLauncher(launchArgs.section("/", -1));
+        appendDesktopLauncher(launchArgUrl.section("/", -1));
 
     endResetModel();
     emit showWindow();
@@ -128,10 +132,10 @@ void AppChooser::launch(int idx)
     ActionItem *actionItem = m_actionList.at(idx);
     if (actionItem->launchAction().isEmpty())
         actionItem->setLaunchAction(actionToLaunchAction(actionItem->action()));
-    qDebug() << actionItem->launchAction();
+    qCDebug(logAppchooser) << actionItem->launchAction();
     Action launcherAction = Action::launcherAction(
                 actionItem->launchAction() + ".desktop",
-                {m_launchArgs});
+                {m_launchArgUrl});
     if (!launcherAction.isValid()) {
         emit hideWindow();
         return;
@@ -148,10 +152,10 @@ void AppChooser::launch(int idx)
 
 bool AppChooser::launchApp(const QString &name)
 {
-    Action launcherAction = Action::launcherAction(name + ".desktop", {m_launchArgs});
-    if (!launcherAction.isValid() || name == "appchooser") {
+    Action launcherAction = Action::launcherAction(name + ".desktop", {m_launchArgUrl});
+    if (!launcherAction.isValid() || name == "appchooser")
         return false;
-    }
+
     launcherAction.trigger();
     notifyLaunching(launchActionToAction(name) + ".desktop");
 
@@ -196,23 +200,27 @@ void AppChooser::saveMime(int idx)
     }
 }
 
-QString AppChooser::launchArgs() const
+QString AppChooser::launchArg() const
 {
-    return m_launchArgsPretty;
+    return m_launchArg;
 }
 
-void AppChooser::setLaunchArgs(const QString &launchArgs)
+void AppChooser::setLaunchArg(const QString &launchArgUrl)
 {
-    if (launchArgs == m_launchArgs)
+    qCDebug(logAppchooser) << launchArgUrl;
+    if (launchArgUrl == m_launchArgUrl)
         return;
-    m_launchArgs = m_launchArgsPretty = launchArgs;
+    m_launchArgUrl = m_launchArg = launchArgUrl;
 
-    QUrl url(m_launchArgsPretty);
-    m_launchArgsPretty = url.toString();
-    if (m_launchArgsPretty.startsWith("file:///"))
-        m_launchArgsPretty.remove("file://");
+    QUrl url(m_launchArgUrl);
+    if (launchArgUrl.startsWith("file:/")) {
+        m_launchArg = url.path();
+    }
 
-    emit launchArgsChanged();
+    qCDebug(logAppchooser) << "tostring: " << url.toString();
+    qCDebug(logAppchooser) << "m_launchArg: " << m_launchArg;
+
+    emit launchArgChanged();
 }
 
 bool AppChooser::rememberChoice() const
@@ -262,9 +270,9 @@ void AppChooser::setDedicatedAppsMode(bool dedicatedAppsMode)
 
 void AppChooser::checkMimeinfoCache()
 {
-    if (QFileInfo("/home/nemo/.local/share/applications/mimeinfo.cache").exists()) {
-        qDebug() << "harbour compatible webcat or/and microtube detected. It will cause issues for other \"x-scheme-handler/https\" handlers."
-                 << "Remove /home/nemo/.local/share/applications/mimeinfo.cache and move /home/nemo/.local/share/applications/*.desktop to /usr/share/applications/."
+    if (QFileInfo(m_homePath + "/.local/share/applications/mimeinfo.cache").exists()) {
+        qCDebug(logAppchooser) << "harbour compatible webcat, microtube or other app which overrides http handler detected."
+                 << "Remove " + m_homePath + "/.local/share/applications/mimeinfo.cache and move " + m_homePath + "/.local/share/applications/*.desktop to /usr/share/applications/."
                  << "Next run update-desktop-database as root if you want to use other browsers.";
     }
 }
@@ -272,7 +280,7 @@ void AppChooser::checkMimeinfoCache()
 QStringList AppChooser::mimesForString()
 {
     QProcess proc;
-    proc.start("lca-tool --string --printmimes " + m_launchArgs);
+    proc.start("lca-tool --string --printmimes " + m_launchArgUrl);
     if (!proc.waitForStarted(2000))
         return QStringList();
     if (!proc.waitForFinished(2000))
@@ -285,9 +293,9 @@ QStringList AppChooser::mimesForString()
 QString AppChooser::mimeForUrl()
 {
     QMimeDatabase db;
-    QMimeType mimeType = db.mimeTypeForUrl(m_launchArgs);
+    QMimeType mimeType = db.mimeTypeForUrl(m_launchArgUrl);
     if (mimeType.name() == "application/octet-stream") // unknown
-        return "x-scheme-handler/" + QUrl(m_launchArgs).scheme();
+        return "x-scheme-handler/" + QUrl(m_launchArgUrl).scheme();
     else
         return mimeType.name();
 }
@@ -300,16 +308,21 @@ QStringList AppChooser::ancestorsForMime(const QString &mime)
     return ancestors;
 }
 
-QStringList AppChooser::mimesForFile(const QString &fileName)
+QStringList AppChooser::mimesForFile(const QString &fileNameUrl)
 {
     QMimeDatabase db;
     QMimeType mimeType;
-    QUrl fileUrl = QUrl(fileName);
+    QUrl fileUrl = QUrl(fileNameUrl);
+    QString fileName = fileUrl.path();
     ContentInfo contentInfo = ContentInfo::forFile(fileUrl);
-    if (contentInfo.mimeType() == "application/x-trash")
-        mimeType = db.mimeTypeForFile(fileUrl.path(), QMimeDatabase::MatchContent);
-    else
+    if (contentInfo.mimeType() == "application/x-trash") {
+        mimeType = db.mimeTypeForFile(fileName, QMimeDatabase::MatchContent);
+        if (mimeType.name() == "application/octet-stream" && fileName.endsWith("~"))
+            mimeType = db.mimeTypeForFile(fileName.remove(fileName.length() - 1, 1),
+                                          QMimeDatabase::MatchExtension);
+    } else {
         mimeType = db.mimeTypeForName(contentInfo.mimeType());
+    }
     QStringList mimes = {mimeType.name()};
     mimes << mimeType.allAncestors();
     return mimes;
@@ -322,7 +335,7 @@ QString AppChooser::actionToLaunchAction(const QString &action)
         launchAction = "open-url";
     } else {
         QStringList postfixList;
-        if (m_launchArgs.startsWith("file:/"))
+        if (m_launchArgUrl.startsWith("file:/"))
             postfixList << fileActionPostfixList;
         else
             postfixList << schemeActionPostfixList;

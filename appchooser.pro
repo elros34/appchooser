@@ -12,7 +12,7 @@ mimeapps.files = data/mimeapps-appchooser.list
 mimeapps.path = /usr/share/appchooser/
 INSTALLS += mimeapps
 
-contentaction.files = contentaction/video-url.xml
+contentaction.files = contentaction/video-url.xml contentaction/telegram.xml
 contentaction.path = /usr/share/contentaction/
 INSTALLS += contentaction
 

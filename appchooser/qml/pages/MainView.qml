@@ -110,10 +110,10 @@ Item {
                     property bool expanded: false
                     property string labelText: {
                         if (expanded && appChooser.currentMimeType.length)
-                            return appChooser.launchArgs + " <font color=\"" +
+                            return appChooser.launchArg + " <font color=\"" +
                                 Theme.secondaryHighlightColor + "\">(" + appChooser.currentMimeType + ")</font>"
                         else
-                           return appChooser.launchArgs
+                           return appChooser.launchArg
                     }
 
                     Connections {
@@ -129,7 +129,7 @@ Item {
                     MenuItem {
                         text: "Copy to clipboard"
                         onClicked: {
-                            Clipboard.text = appChooser.launchArgs
+                            Clipboard.text = appChooser.launchArg
                         }
                     }
                 }

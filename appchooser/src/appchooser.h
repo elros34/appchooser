@@ -5,6 +5,9 @@
 #include <contentaction5/contentaction.h>
 #include <QAbstractListModel>
 #include "actionsmodel.h"
+#include <QLoggingCategory>
+
+Q_DECLARE_LOGGING_CATEGORY(logAppchooser)
 
 using namespace ContentAction;
 
@@ -13,19 +16,19 @@ class MGConfItem;
 class AppChooser : public ActionsModel
 {
     Q_OBJECT
-    Q_PROPERTY(QString launchArgs READ launchArgs NOTIFY launchArgsChanged)
+    Q_PROPERTY(QString launchArg READ launchArg NOTIFY launchArgChanged)
     Q_PROPERTY(bool rememberChoice READ rememberChoice WRITE setRememberChoice NOTIFY rememberChoiceChanged)
     Q_PROPERTY(bool dedicatedAppsMode READ dedicatedAppsMode WRITE setDedicatedAppsMode NOTIFY dedicatedAppsModeChanged)
     Q_PROPERTY(QString currentMimeType READ currentMimeType NOTIFY currentMimeTypeChanged)
 public:
     explicit AppChooser(QObject *parent = nullptr);
 
-    Q_INVOKABLE void openWith(const QString &launchArgs);
+    Q_INVOKABLE void openWith(const QString &launchArgUrl);
     Q_INVOKABLE void launch(int idx);
     Q_INVOKABLE void clear();
 
-    QString launchArgs() const;
-    void setLaunchArgs(const QString &launchArgs);
+    QString launchArg() const;
+    void setLaunchArg(const QString &launchArgUrl);
 
     bool rememberChoice() const;
     void setRememberChoice(bool rememberChoice);
@@ -38,13 +41,14 @@ public:
 
 private:
     QStringList iconsPaths;
-    QString m_launchArgs;
-    QString m_launchArgsPretty;
+    QString m_launchArgUrl;
+    QString m_launchArg;
     bool m_rememberChoice;
     QString m_fileMimeType;
     QString m_currentMimeType;
     bool m_dedicatedAppsMode;
     MGConfItem *httpHandlerConf;
+    QString m_homePath;
 
 private:
     void appendAction(const Action &action);
@@ -53,7 +57,7 @@ private:
     QStringList mimesForString();
     QString mimeForUrl();
     QStringList ancestorsForMime(const QString &mime);
-    QStringList mimesForFile(const QString &fileName);
+    QStringList mimesForFile(const QString &fileNameUrl);
     void saveMime(int idx);
     void appendDesktopLauncher(const QString &desktop);
     QString actionToLaunchAction(const QString &action);
@@ -62,7 +66,7 @@ private:
     bool launchApp(const QString &name);
 
 signals:
-    void launchArgsChanged();
+    void launchArgChanged();
     void showWindow();
     void hideWindow();
     void rememberChoiceChanged();

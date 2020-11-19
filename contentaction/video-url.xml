@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <actions>
   <highlight regexp="(https?://)?.*((\.mp4)|(\.m4v)).*" name="video-url"/>
-  <highlight regexp="(https?://)?.*youtube\..*/watch.*" name="youtube-video-url"/>
+  <highlight regexp="(https?://)?.*((youtube\..*/watch)|(youtu.be/)).*" name="youtube-video-url"/>
 </actions>

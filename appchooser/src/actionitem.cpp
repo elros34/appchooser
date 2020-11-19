@@ -15,6 +15,13 @@ QString ActionItem::name() const
 void ActionItem::setName(const QString &name)
 {
     m_name = name;
+    QString sn = name;
+    sn.remove("-");
+    sn.remove("_");
+    sn.remove(" ");
+    sn.replace("µ", "u");
+    sn = sn.toLower();
+    setNameSimplified(sn);
 }
 
 QString ActionItem::icon() const
@@ -66,4 +73,14 @@ bool ActionItem::dedicated() const
 void ActionItem::setDedicated(bool dedicated)
 {
     m_dedicated = dedicated;
+}
+
+QString ActionItem::nameSimplified() const
+{
+    return m_nameSimplified;
+}
+
+void ActionItem::setNameSimplified(const QString &nameSimplified)
+{
+    m_nameSimplified = nameSimplified;
 }

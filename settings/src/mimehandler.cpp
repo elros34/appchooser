@@ -8,14 +8,17 @@
 #include <QtXml/QDomComment>
 #include <mlite5/MGConfItem>
 #include <mlite5/MDesktopEntry>
+#include <nemonotifications-qt5/notification.h>
 
 using namespace ContentAction;
 
 MimeHandler::MimeHandler(QObject *parent) : QAbstractListModel(parent)
 {
+    m_homePath = QDir::homePath();
     httpHandlerConf = new MGConfItem("/apps/appchooser/deafaultHttpHandler", this);
     fixMimeAppsList();
     refresh();
+    checkMimeinfoCache();
 }
 
 MimeHandler::~MimeHandler()
@@ -207,7 +210,7 @@ void MimeHandler::appendMimes(const QString &prefix, const QStringList &mimes)
 void MimeHandler::fixMimeAppsList()
 {
     QByteArray data;
-    QFile file("/home/nemo/.local/share/applications/mimeapps.list");
+    QFile file(m_homePath + "/.local/share/applications/mimeapps.list");
     if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
         while (!file.atEnd()) {
             QByteArray line = file.readLine();
@@ -237,5 +240,19 @@ void MimeHandler::setMimeDefault(const QString &mimeType, const QString &app)
         httpHandlerConf->set(app);
     } else {
         ContentAction::setMimeDefault(mimeType, app);
+    }
+}
+
+void MimeHandler::checkMimeinfoCache()
+{
+    if (QFileInfo(m_homePath + "/.local/share/applications/mimeinfo.cache").exists()) {
+        Notification notification;
+        notification.setAppName("AppChooser");
+        notification.setAppIcon("image://theme/icon-m-menu");
+        notification.setPreviewSummary("'x-scheme-handler/http' override detected");
+        QString msg = "Remove " + m_homePath + "/.local/share/applications/mimeinfo.cache and "
+                      "run update-desktop-database as root to fix this mess.";
+        notification.setBody(msg);
+        notification.publish();
     }
 }

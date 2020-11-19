@@ -2,7 +2,7 @@ TEMPLATE = lib
 
 CONFIG += plugin c++11 link_pkgconfig
 
-PKGCONFIG += contentaction5 mlite5
+PKGCONFIG += contentaction5 mlite5 nemonotifications-qt5
 
 QT += qml quick xml
 

@@ -9,7 +9,7 @@ class AppChooserFilter : public QSortFilterProxyModel
     Q_OBJECT
     Q_PROPERTY(bool dedicatedAppsMode READ dedicatedAppsMode WRITE setDedicatedAppsMode)
 public:
-    AppChooserFilter(QObject *parent = 0);
+    AppChooserFilter(QObject *parent = nullptr);
 
     bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const;
 
@@ -22,6 +22,7 @@ public:
 private:
     bool m_dedicatedAppsMode;
     QString m_search;
+    QString m_searchSimplified;
 };
 
 #endif // APPCHOOSERFILTER_H

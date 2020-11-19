@@ -10,11 +10,12 @@ class ActionsModel : public QAbstractListModel
     Q_OBJECT
     Q_PROPERTY(bool busy READ busy WRITE setBusy NOTIFY busyChanged)
 public:
-    ActionsModel(QObject *parent = 0);
+    ActionsModel(QObject *parent = nullptr);
     ~ActionsModel();
 
     enum myRoles {
         NameRole = Qt::UserRole + 1,
+        NameSimplifiedRole,
         IconRole,
         DedicatedRole,
     };

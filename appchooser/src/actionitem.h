@@ -28,8 +28,12 @@ public:
     bool dedicated() const;
     void setDedicated(bool dedicated);
 
+    QString nameSimplified() const;
+    void setNameSimplified(const QString &nameSimplified);
+
 private:
     QString m_name;
+    QString m_nameSimplified;
     QString m_icon;
     QString m_desktop;
     QString m_launchAction;

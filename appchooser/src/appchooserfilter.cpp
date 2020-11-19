@@ -13,6 +13,7 @@ bool AppChooserFilter::filterAcceptsRow(int source_row, const QModelIndex &sourc
 
     static const int dedicatedRole = sourceModel()->roleNames().key("dedicated");
     static const int nameRole = sourceModel()->roleNames().key("name");
+    static const int nameSimplifiedRole = sourceModel()->roleNames().key("nameSimplified");
 
     bool show = false;
 
@@ -20,7 +21,13 @@ bool AppChooserFilter::filterAcceptsRow(int source_row, const QModelIndex &sourc
         show = dedicatedAppsMode() ? sourceIndex.data(dedicatedRole).toBool() : true;
         if (show) {
             QString name = sourceIndex.data(nameRole).toString();
-            show = m_search.isEmpty() ? true : name.contains(m_search, Qt::CaseInsensitive);
+            QString nameSimplified = sourceIndex.data(nameSimplifiedRole).toString();
+            if (m_search.isEmpty()) {
+                show = true;
+            } else {
+                show = name.contains(m_search, Qt::CaseInsensitive);
+                show |= nameSimplified.contains(m_searchSimplified, Qt::CaseInsensitive);
+            }
         }
     }
 
@@ -43,6 +50,10 @@ void AppChooserFilter::setDedicatedAppsMode(bool dedicatedAppsMode)
 void AppChooserFilter::search(const QString &search)
 {
     m_search = search;
+    m_searchSimplified = m_search;
+    m_searchSimplified.remove("-");
+    m_searchSimplified.remove("_");
+    m_searchSimplified.remove(" ");
     invalidateFilter();
 }
 
