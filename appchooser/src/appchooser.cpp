@@ -315,7 +315,8 @@ QStringList AppChooser::mimesForFile(const QString &fileNameUrl)
     QUrl fileUrl = QUrl(fileNameUrl);
     QString fileName = fileUrl.path();
     ContentInfo contentInfo = ContentInfo::forFile(fileUrl);
-    if (contentInfo.mimeType() == "application/x-trash") {
+    if (contentInfo.mimeType() == "application/x-trash" ||
+        contentInfo.mimeType() == "application/x-java-keystore") {
         mimeType = db.mimeTypeForFile(fileName, QMimeDatabase::MatchContent);
         if (mimeType.name() == "application/octet-stream" && fileName.endsWith("~"))
             mimeType = db.mimeTypeForFile(fileName.remove(fileName.length() - 1, 1),
