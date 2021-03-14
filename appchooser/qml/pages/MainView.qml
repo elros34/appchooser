@@ -1,10 +1,22 @@
-import QtQuick 2.0
+import QtQuick 2.6
 import Sailfish.Silica 1.0
 
-Item {
-    id: mainView
-    property alias flickable: flickable
+SilicaFlickable {
+    id: flickable
+    width: parent.width
+    height: Math.min(maxMainViewHeight, Math.max(contentHeight, 2*Theme.itemSizeExtraLarge), keyboardY)
+    contentHeight: column.height
+
     property alias searchField: searchField
+    property int maxMainViewHeight: window.screenHeight * 4/5
+    property bool isPortrait: (window.orientation === Qt.PortraitOrientation) ||
+                              (window.orientation === Qt.InvertedPortraitOrientation)
+    property int keyboardY: {
+        if (!Qt.inputMethod.visible)
+            return Screen.height
+        var rec = Qt.inputMethod.keyboardRectangle
+        return isPortrait ? rec.y : (Screen.width - rec.width)
+    }
 
     focus: !searchField.focus && window.visible
 
@@ -17,115 +29,108 @@ Item {
         }
     }
 
-    SilicaFlickable {
-        id: flickable
-        width: parent.width
-        height: Math.min(contentHeight, rotateItem.maxMainViewHeight)
-        contentHeight: column.height
+    PullDownMenu {
+        enabled: appChooser.currentMimeType.length
+        visible: enabled
 
-        PullDownMenu {
-            enabled: appChooser.currentMimeType.length
-            visible: enabled
-
-            MenuItem {
-                enabled: listView.count
-                TextSwitch {
-                    id: textSwitch
-                    text: "Remember choice"
-                    width: parent.width
-                    checked: appChooser.rememberChoice
-                    enabled: parent.enabled
-                    _label.color: parent.color
-                    leftMargin: (parent.width - _label.contentWidth)/3 //FIXME
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                onClicked: {
-                    appChooser.rememberChoice = !appChooser.rememberChoice
-                }
+        MenuItem {
+            enabled: listView.count
+            TextSwitch {
+                id: textSwitch
+                text: "Remember choice"
+                width: parent.width
+                checked: appChooser.rememberChoice
+                enabled: parent.enabled
+                _label.color: parent.color
+                leftMargin: (parent.width - _label.contentWidth)/3 //FIXME
+                anchors.verticalCenter: parent.verticalCenter
             }
 
-            MenuItem {
-                text: appChooser.dedicatedAppsMode ? "More applications" : "Dedicated applications"
-                onClicked: {
-                    if (appChooser.dedicatedAppsMode)
-                        appChooser.busy = true
-                }
-                onDelayedClick: {
-                    appChooser.dedicatedAppsMode = !appChooser.dedicatedAppsMode
-                }
-            }
-
-            MenuItem {
-                text: searchField.visible ? "Hide Search" : "Show Search"
-                onClicked: {
-                    searchField.visible = !searchField.visible
-                }
+            onClicked: {
+                appChooser.rememberChoice = !appChooser.rememberChoice
             }
         }
 
-        Column {
-            id: column
-            width: mainView.width
-            spacing: Theme.paddingSmall
-
-            Item {
-                height: Theme.paddingMedium
-                width: 1
+        MenuItem {
+            text: appChooser.dedicatedAppsMode ? "More applications" : "Dedicated applications"
+            onClicked: {
+                if (appChooser.dedicatedAppsMode)
+                    appChooser.busy = true
             }
+            onDelayedClick: {
+                appChooser.dedicatedAppsMode = !appChooser.dedicatedAppsMode
+            }
+        }
+
+        MenuItem {
+            text: searchField.visible ? "Hide Search" : "Show Search"
+            onClicked: {
+                searchField.visible = !searchField.visible
+            }
+        }
+    }
+
+    Column {
+        id: column
+        width: mainView.width
+        spacing: Theme.paddingSmall
+
+        Item {
+            height: Theme.paddingMedium
+            width: 1
+        }
+
+        Label {
+            width: parent.width - 2*Theme.paddingMedium
+            anchors.horizontalCenter: parent.horizontalCenter
+            horizontalAlignment: Text.AlignHCenter
+            text: "Open with"
+            color: Theme.highlightColor
+            font {
+                family: Theme.fontFamilyHeading
+                pixelSize: Theme.fontSizeLarge
+            }
+        }
+
+        ListItem {
+            width: parent.width
+            contentHeight: urlLabel.contentHeight
+            clip: true
+            onClicked: urlLabel.expanded = !urlLabel.expanded
+
+            Behavior on contentHeight {NumberAnimation { duration: 150}}
 
             Label {
-                width: parent.width - 2*Theme.paddingMedium
+                id: urlLabel
+                width: parent.width - 2*Theme.paddingLarge
                 anchors.horizontalCenter: parent.horizontalCenter
-                horizontalAlignment: Text.AlignHCenter
-                text: "Open with"
-                color: Theme.highlightColor
-                font {
-                    family: Theme.fontFamilyHeading
-                    pixelSize: Theme.fontSizeLarge
+                wrapMode: Text.WrapAnywhere
+                text: labelText
+                maximumLineCount: expanded ? undefined : 2
+                textFormat: Text.StyledText
+                truncationMode: TruncationMode.Elide
+
+                clip: true
+                property bool expanded: false
+                property string labelText: {
+                    if (expanded && appChooser.currentMimeType.length)
+                        return appChooser.launchArg + " <font color=\"" +
+                                Theme.secondaryHighlightColor + "\">(" + appChooser.currentMimeType + ")</font>"
+                    else
+                        return appChooser.launchArg
+                }
+
+                Connections {
+                    target: window
+                    onVisibleChanged: {
+                        if (!visible)
+                            urlLabel.expanded = false
+                    }
                 }
             }
 
-
-            ListItem {
-                width: parent.width
-                contentHeight: urlLabel.contentHeight
-                clip: true
-                onClicked: {
-                    urlLabel.expanded = !urlLabel.expanded
-                }
-                Behavior on contentHeight {NumberAnimation { duration: 150}}
-
-                Label {
-                    id: urlLabel
-                    width: parent.width - 2*Theme.paddingLarge
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    wrapMode: Text.WrapAnywhere
-                    text: labelText
-                    maximumLineCount: expanded ? undefined : 2
-                    textFormat: Text.StyledText
-                    truncationMode: TruncationMode.Elide
-
-                    clip: true
-                    property bool expanded: false
-                    property string labelText: {
-                        if (expanded && appChooser.currentMimeType.length)
-                            return appChooser.launchArg + " <font color=\"" +
-                                Theme.secondaryHighlightColor + "\">(" + appChooser.currentMimeType + ")</font>"
-                        else
-                           return appChooser.launchArg
-                    }
-
-                    Connections {
-                        target: window
-                        onVisibleChanged: {
-                            if (!visible)
-                                urlLabel.expanded = false
-                        }
-                    }
-                }
-
-                menu: ContextMenu {
+            menu: Component {
+                ContextMenu{
                     MenuItem {
                         text: "Copy to clipboard"
                         onClicked: {
@@ -134,100 +139,100 @@ Item {
                     }
                 }
             }
+        }
 
-            Item {
-                width: parent.width
-                height: noAppsLabel.height + Theme.paddingLarge
-                visible: !listView.count && !searchField.visible
-                Label {
-                    id: noAppsLabel
+        Item {
+            width: parent.width
+            height: noAppsLabel.height + Theme.paddingLarge
+            visible: !listView.count && !searchField.visible
+            Label {
+                id: noAppsLabel
+                anchors {
+                    left: parent.left
+                    leftMargin: Theme.paddingMedium
+                    right: parent.right
+                    rightMargin: Theme.paddingMedium
+                    verticalCenter: parent.verticalCenter
+                }
+                wrapMode: Text.Wrap
+                text: "No dedicated application found"
+                horizontalAlignment: Text.AlignHCenter
+                color: Theme.highlightColor
+                font.pixelSize: Theme.fontSizeLarge
+            }
+        }
+
+        SearchField {
+            id: searchField
+            width: parent.width
+            visible: false
+            focus: visible
+            placeholderText: "Search .."
+            focusOutBehavior: FocusBehavior.KeepFocus
+            inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+
+            onTextChanged: {
+                appChooserFilter.search(text)
+            }
+        }
+
+        SilicaListView {
+            id: listView
+            width: parent.width
+            height: contentHeight
+            currentIndex: -1
+
+            verticalLayoutDirection: ListView.BottomToTop
+
+            model: appChooserFilter
+
+            delegate: ListItem {
+
+                Item {
+                    id: iconItem
+                    height: parent.height
+                    width: height
                     anchors {
                         left: parent.left
-                        leftMargin: Theme.paddingMedium
-                        right: parent.right
-                        rightMargin: Theme.paddingMedium
+                        leftMargin: Theme.paddingLarge
+                    }
+
+                    Image {
+                        source: model.icon
+                        anchors.centerIn: parent
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                        width: parent.width - Theme.paddingMedium
+                        height: width
+                        sourceSize.width: width
+                        sourceSize.height: width
+                    }
+                }
+
+                Label {
+                    anchors {
+                        left: iconItem.right
+                        leftMargin: Theme.paddingLarge
                         verticalCenter: parent.verticalCenter
                     }
-                    wrapMode: Text.Wrap
-                    text: "No dedicated application found"
-                    horizontalAlignment: Text.AlignHCenter
-                    color: Theme.highlightColor
-                    font.pixelSize: Theme.fontSizeLarge
+
+                    text: model.name
                 }
-            }
 
-            SearchField {
-                id: searchField
-                width: parent.width
-                visible: false
-                focus: visible
-                placeholderText: "Search .."
-                focusOutBehavior: FocusBehavior.KeepFocus
-                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
-
-                onTextChanged: {
-                    appChooserFilter.search(text)
+                onClicked: {
+                    appChooser.launch(appChooserFilter.indexToSource(index))
                 }
-            }
-
-            SilicaListView {
-                id: listView
-                width: parent.width
-                height: contentHeight
-                currentIndex: -1
-
-                verticalLayoutDirection: ListView.BottomToTop
-
-                model: appChooserFilter
-
-                delegate: ListItem {
-
-                    Item {
-                        id: iconItem
-                        height: parent.height
-                        width: height
-                        anchors {
-                            left: parent.left
-                            leftMargin: Theme.paddingLarge
-                        }
-
-                        Image {
-                            source: model.icon
-                            anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
-                            asynchronous: true
-                            width: parent.width - Theme.paddingMedium
-                            height: width
-                            sourceSize.width: width
-                            sourceSize.height: width
-                        }
-                    }
-
-                    Label {
-                        anchors {
-                            left: iconItem.right
-                            leftMargin: Theme.paddingLarge
-                            verticalCenter: parent.verticalCenter
-                        }
-
-                        text: model.name
-                    }
-
-                    onClicked: {
-                       appChooser.launch(appChooserFilter.indexToSource(index))
-                    }
-                }
-            }
-
-            Item {
-                height: Theme.paddingMedium
-                width: 1
             }
         }
 
-        VerticalScrollDecorator {
-            flickable: flickable
+        Item {
+            height: Theme.paddingMedium
+            width: 1
         }
+    }
+
+    VerticalScrollDecorator {
+        flickable: flickable
     }
 
     BusyIndicator {

@@ -3,7 +3,7 @@ TARGET = appchooser
 
 CONFIG += sailfishapp
 
-QT += gui-private dbus
+QT += dbus
 
 PKGCONFIG += contentaction5 mlite5
 

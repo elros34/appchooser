@@ -2,7 +2,7 @@ Name:       appchooser
 
 
 Summary:    Application chooser
-Version:    0.1.1
+Version:    0.1.2
 Release:    1
 Group:      Qt/Qt
 License:    LICENSE
@@ -65,7 +65,7 @@ if [ "$(su $LOGNAME -c "dconf read /apps/appchooser/mimeappsVersion")" != "1" ];
 fi
 
 killall appchooser 2>/dev/null || true
-update-desktop-database 2>&1 | grep -v x-maemo-highlight
+update-desktop-database 2>&1 | grep -v x-maemo-highlight || true
 
 # Remove OpenFileDialog.qml to allow pre 3.1.0 release way to open MIME handlers
 echo "Backup OpenFileDialog.qml"
